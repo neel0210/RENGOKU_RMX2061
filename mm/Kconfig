@@ -786,6 +786,14 @@ config PERCPU_STATS
 config ARCH_SUPPORTS_SPECULATIVE_PAGE_FAULT
        def_bool n
 
+config VM_MAX_READAHEAD_KB
+	int "Default max readahead window size in Kilobytes"
+	default 128
+	help
+	  This sets the VM_MAX_READAHEAD value to allow the readahead window
+	  to grow to a maximum size of configured. Increasing this value will
+	  benefit sequential read throughput.
+
 config SPECULATIVE_PAGE_FAULT
        bool "Speculative page faults"
        default y
