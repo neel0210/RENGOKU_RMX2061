@@ -1163,6 +1163,20 @@ static void kgsl_process_private_close(struct kgsl_device_private *dev_priv,
 	/* Release all syncsource objects from process private */
 	kgsl_syncsource_process_release_syncsources(private);
 
+	/* When using global pagetables, do not detach global pagetable */
+	if (private->pagetable->name != KGSL_MMU_GLOBAL_PT)
+		kgsl_mmu_detach_pagetable(private->pagetable);
+
+	/* Remove the process struct from the master list */
+	spin_lock(&kgsl_driver.proclist_lock);
+	list_del(&private->list);
+	spin_unlock(&kgsl_driver.proclist_lock);
+
+	/*
+	 * Unlock the mutex before releasing the memory and the debugfs
+	 * nodes - this prevents deadlocks with the IOMMU and debugfs
+	 * locks.
+	 */
 	mutex_unlock(&kgsl_driver.process_mutex);
 
 	kgsl_process_private_put(private);
@@ -1180,7 +1194,19 @@ static struct kgsl_process_private *_process_private_open(
 	if (IS_ERR(private))
 		goto done;
 
-	private->fd_count++;
+	/*
+	 * If this is a new process create the debug directories and add it to
+	 * the process list
+	 */
+
+	if (private->fd_count++ == 0) {
+		kgsl_process_init_sysfs(device, private);
+		kgsl_process_init_debugfs(private);
+
+		spin_lock(&kgsl_driver.proclist_lock);
+		list_add(&private->list, &kgsl_driver.process_list);
+		spin_unlock(&kgsl_driver.proclist_lock);
+	}
 
 done:
 	mutex_unlock(&kgsl_driver.process_mutex);
