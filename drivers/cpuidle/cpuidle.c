@@ -682,7 +682,13 @@ static void wake_up_idle_cpus(void *v)
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-	wake_up_idle_cpus(v);
+	unsigned long cpus = atomic_read(&idled) & *cpumask_bits(to_cpumask(v));
+
+	/* Use READ_ONCE to get the isolated mask outside cpu_add_remove_lock */
+	cpus &= ~READ_ONCE(*cpumask_bits(cpu_isolated_mask));
+	if (cpus)
+		smp_send_ipi(to_cpumask(&cpus));
+
 	return NOTIFY_OK;
 }
 
