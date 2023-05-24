@@ -838,6 +838,12 @@ KBUILD_CFLAGS   += -fgraphite-identity
 endif
 endif
 
+ifdef CONFIG_SOC_SD720G
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS	+= $(call cc-option,-mcpu=Kryo465,$(call cc-option,-mcpu=Kryo465))
+endif
+endif
+
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-allow-store-data-races)
